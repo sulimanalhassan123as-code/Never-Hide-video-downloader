@@ -40,3 +40,6 @@ def get_video_info_proxy():
     except Exception as e:
         # Handle other errors (like network issues)
         return jsonify({"error": f"An internal error occurred: {e}"}), 500
+@app.route('/healthz')
+def healthz():
+    return 'OK', 200
