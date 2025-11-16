@@ -1,10 +1,10 @@
 from flask import Flask, render_template, request, redirect, url_for
-import requests # This should be the ONLY import for a video library
+import requests
 
 app = Flask(__name__)
 
-# The URL for the public Cobalt API
-COBALT_API_URL = "https://co.wuk.sh/api/json"
+# The NEW, correct, and working API URL for Cobalt
+COBALT_API_URL = "https://api.cobalt.tools/api/json"
 
 @app.route('/')
 def index():
@@ -28,7 +28,7 @@ def download():
         }
 
         # Send a POST request to the Cobalt API
-        response = requests.post(COBALT_API_URL, json=payload)
+        response = requests.post(COBALT_API_URL, json=payload, headers={"Accept": "application/json"})
         response.raise_for_status() 
 
         # Get the JSON data from the response
