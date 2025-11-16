@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for
-import requests # The library to make HTTP requests
+import requests # This should be the ONLY import for a video library
 
 app = Flask(__name__)
 
@@ -21,16 +21,15 @@ def download():
 
     try:
         # Prepare the data to send to the Cobalt API
-        # We are asking for the best quality video download
         payload = {
             "url": video_url,
-            "vQuality": "1080", # You can change this to 720, 480 etc.
+            "vQuality": "1080",
             "isNoTTWatermark": True
         }
 
         # Send a POST request to the Cobalt API
         response = requests.post(COBALT_API_URL, json=payload)
-        response.raise_for_status() # This will raise an error if the request failed
+        response.raise_for_status() 
 
         # Get the JSON data from the response
         data = response.json()
@@ -40,12 +39,10 @@ def download():
             download_url = data.get("url")
             return redirect(download_url)
         else:
-            # If the API returns an error or something else, go back home
             print(f"API returned an error: {data.get('text')}")
             return redirect(url_for('index'))
 
     except Exception as e:
-        # If our request to the API fails, print the error and go back home
         print(f"An error occurred: {e}")
         return redirect(url_for('index'))
 
