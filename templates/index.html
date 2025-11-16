@@ -4,103 +4,121 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Video Downloader</title>
+
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f0f2f5; }
-        .container { text-align: center; background-color: white; padding: 40px 50px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1); width: 90%; max-width: 500px; }
-        h1 { color: #1c1e21; margin-bottom: 25px; font-size: 28px; }
-        .url-input { width: 100%; padding: 14px; margin-bottom: 20px; border: 1px solid #dddfe2; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
-        .download-btn { background-color: #1877f2; color: white; border: none; padding: 14px 28px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background-color 0.3s ease; width: 100%; }
-        .download-btn:hover { background-color: #166fe5; }
-        .download-btn:disabled { background-color: #9cb4d8; cursor: not-allowed; }
-        .status-message { display: none; margin-top: 20px; font-size: 15px; color: #555; }
-        .error-message { display: none; margin-top: 20px; font-size: 15px; color: #d93025; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f2f5;
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 500px;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        button {
+            margin-top: 20px;
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            background: #1877f2;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #166fe5;
+        }
+
+        .status {
+            display: none;
+            margin-top: 20px;
+            color: #555;
+        }
+
+        .error {
+            display: none;
+            margin-top: 20px;
+            color: red;
+        }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>Video Downloader</h1>
-        <!-- The form no longer needs an action or method -->
-        <form id="download-form">
-            <input type="url" id="video-url-input" class="url-input" placeholder="Paste your video link here..." required>
-            <button type="submit" id="download-btn" class="download-btn">Download Video</button>
-        </form>
-        <div id="status-message" class="status-message">⏳ Processing your video... Please wait.</div>
-        <div id="error-message" class="error-message"></div>
-    </div>
+<div class="container">
+    <h1>Video Downloader</h1>
 
-    <script>
-        // Get references to our HTML elements
-        const form = document.getElementById('download-form');
-        const urlInput = document.getElementById('video-url-input');
-        const downloadBtn = document.getElementById('download-btn');
-        const statusMessage = document.getElementById('status-message');
-        const errorMessage = document.getElementById('error-message');
+    <input id="videoInput" placeholder="Paste your video link here..." />
 
-        // The API endpoint
-        const API_ENDPOINT = "https://yt-dlp-api.vercel.app/api/info?url=";
+    <button onclick="downloadVideo()">Download</button>
 
-        // This function runs when the form is submitted
-        form.addEventListener('submit', async (event) => {
-            event.preventDefault(); // Stop the form from reloading the page
+    <div id="status" class="status">⏳ Processing…</div>
+    <div id="error" class="error"></div>
+</div>
 
-            // Get the URL from the input box
-            const videoUrl = urlInput.value;
-            if (!videoUrl) {
-                return; // Do nothing if the input is empty
+<script>
+    async function downloadVideo() {
+        const url = document.getElementById("videoInput").value;
+        const status = document.getElementById("status");
+        const error = document.getElementById("error");
+
+        if (!url) return;
+
+        status.style.display = "block";
+        error.style.display = "none";
+        status.textContent = "⏳ Processing…";
+
+        try {
+            const res = await fetch(`/api/get_video_info?url=${encodeURIComponent(url)}`);
+
+            if (!res.ok) throw new Error("Failed to fetch video data.");
+
+            const data = await res.json();
+
+            if (data.error) throw new Error(data.error);
+
+            let bestUrl = null;
+
+            for (const f of data.formats) {
+                if (f.vcodec !== "none" && f.acodec !== "none" && f.ext === "mp4") {
+                    bestUrl = f.url;
+                    break;
+                }
             }
 
-            // Show processing message and disable the button
-            statusMessage.style.display = 'block';
-            errorMessage.style.display = 'none';
-            downloadBtn.disabled = true;
-            downloadBtn.textContent = 'Processing...';
+            if (!bestUrl) throw new Error("No downloadable MP4 found.");
 
-            try {
-                // URL-encode the video link to make it safe for the API call
-                const safeVideoUrl = encodeURIComponent(videoUrl);
-                const fullApiUrl = `${API_ENDPOINT}${safeVideoUrl}`;
+            status.textContent = "Download starting…";
+            window.location.href = bestUrl;
 
-                // Call the API from the browser using fetch
-                const response = await fetch(fullApiUrl);
+        } catch (e) {
+            status.style.display = "none";
+            error.textContent = e.message;
+            error.style.display = "block";
+        }
+    }
+</script>
 
-                if (!response.ok) {
-                    // If the API returns an error (like 400), throw an error
-                    throw new Error('Could not process the video link. Please check the link and try again.');
-                }
-
-                const data = await response.json();
-
-                // Find the best available MP4 format with both video and audio
-                let bestUrl = null;
-                for (const format of data.formats) {
-                    if (format.vcodec !== 'none' && format.acodec !== 'none' && format.ext === 'mp4') {
-                        bestUrl = format.url;
-                        break;
-                    }
-                }
-
-                if (bestUrl) {
-                    // If a link is found, redirect the browser to start the download
-                    statusMessage.textContent = 'Download starting...';
-                    window.location.href = bestUrl;
-                } else {
-                    throw new Error('No downloadable MP4 version found for this video.');
-                }
-
-            } catch (error) {
-                // If anything goes wrong, show an error message
-                statusMessage.style.display = 'none';
-                errorMessage.textContent = error.message;
-                errorMessage.style.display = 'block';
-            } finally {
-                // Re-enable the button after a short delay
-                setTimeout(() => {
-                    downloadBtn.disabled = false;
-                    downloadBtn.textContent = 'Download Video';
-                }, 3000);
-            }
-        });
-    </script>
 </body>
-        </html>
+</html>
