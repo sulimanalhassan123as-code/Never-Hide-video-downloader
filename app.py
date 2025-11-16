@@ -1,46 +1,45 @@
-from flask import Flask, render_template, request, send_file, redirect, url_for, session
+# Import the necessary libraries from Flask and Pytube
+from flask import Flask, render_template, request, send_file, redirect, url_for
 from pytube import YouTube
-import io
+import io # io is used to handle the video data in memory
 
-# Initialize the Flask app
+# Initialize the Flask web application
 app = Flask(__name__)
-# A secret key is needed for session management to store flash messages.
-# Replace 'your_secret_key' with a random string.
-app.secret_key = 'your_secret_key' 
 
+# This is the main route for your website (e.g., your-app-name.com/)
 @app.route('/')
 def index():
-    """
-    Renders the main page of the web application.
-    """
+    """Renders the homepage (the index.html template)."""
     return render_template('index.html')
 
+# This route handles the download request from the form
 @app.route('/download', methods=['POST'])
 def download():
-    """
-    Handles the video download logic.
-    """
+    """Handles the video downloading logic."""
+    # Get the video URL submitted in the form
     video_url = request.form['video_url']
+    
+    # If the user clicks "Download" without pasting a URL, just send them back to the homepage
     if not video_url:
-        # If the user submits an empty form, redirect them back to the homepage
         return redirect(url_for('index'))
 
     try:
-        # Create a YouTube object
+        # Create a YouTube object with the provided URL
         yt = YouTube(video_url)
 
-        # Get the highest resolution progressive stream (video + audio)
+        # Select the best available stream that includes both video and audio
         stream = yt.streams.get_highest_resolution()
 
-        # Download the video into a memory buffer
+        # Create a buffer in memory to hold the video file
         buffer = io.BytesIO()
         stream.stream_to_buffer(buffer)
+        # Reset the buffer's position to the beginning to be ready for reading
         buffer.seek(0)
 
-        # Use a safe filename from the video title
+        # Create a clean, safe filename from the video's title
         safe_filename = "".join([c for c in yt.title if c.isalpha() or c.isdigit() or c.isspace()]).rstrip()
-
-        # Send the buffer as a file attachment for the user to download
+        
+        # Send the video file from the buffer to the user's browser as a downloadable attachment
         return send_file(
             buffer,
             as_attachment=True,
@@ -49,12 +48,11 @@ def download():
         )
 
     except Exception as e:
-        # Handle errors (e.g., invalid URL, private video, etc.)
-        # For simplicity, we'll just print the error and redirect back home.
-        # A more advanced app would show a specific error message to the user.
+        # If any error occurs (e.g., invalid link, private video), print it for debugging
+        # and redirect the user back to the homepage.
         print(f"An error occurred: {e}")
         return redirect(url_for('index'))
 
-# This part is for running the app in a development environment (like Replit's "Run" button)
+# This part is only for development (e.g., running on Replit) and will not be used by Railway/Render.
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
