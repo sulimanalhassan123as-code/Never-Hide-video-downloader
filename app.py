@@ -4,7 +4,7 @@ from urllib.parse import quote
 
 app = Flask(__name__)
 
-API_ENDPOINT = "https://yt-dlp-api.vercel.app/api/info?url="
+API_ENDPOINT = "https://api.ryzendesu.com/info?url="  # More stable
 
 @app.route("/")
 def index():
@@ -21,16 +21,14 @@ def get_video_info():
         safe_url = quote(video_url, safe="")
         full_api_url = f"{API_ENDPOINT}{safe_url}"
 
-        response = requests.get(full_api_url)
+        response = requests.get(
+            full_api_url,
+            headers={"User-Agent": "Mozilla/5.0"},
+            timeout=15
+        )
         response.raise_for_status()
 
         return jsonify(response.json())
 
-    except requests.exceptions.HTTPError as e:
-        return jsonify({"error": f"External API returned an error: {e}"}), 502
     except Exception as e:
-        return jsonify({"error": f"Internal server error: {e}"}), 500
-
-
-if __name__ == "__main__":
-    app.run(debug=True)
+        return jsonify({"error": str(e)}), 500
