@@ -20,8 +20,8 @@ def download():
         return redirect(url_for('index'))
 
     try:
-        # THE CRUCIAL FIX: URL-encode the user's video link to make it safe.
-        safe_video_url = quote(video_url)
+        # THE FINAL FIX: We tell quote() that nothing is safe, so it encodes slashes too.
+        safe_video_url = quote(video_url, safe='')
 
         # Append the now-safe video URL to the API endpoint.
         full_api_url = f"{API_ENDPOINT}{safe_video_url}"
@@ -42,8 +42,7 @@ def download():
         if best_mp4_url:
             return redirect(best_mp4_url)
         else:
-            # If a perfect mp4 isn't found, try to find ANY format with video and audio
-            # This makes the app more robust for other sites.
+            # Fallback for other sites that might not have a clean mp4
             for format in data.get("formats", []):
                 if format.get("vcodec") != "none" and format.get("acodec") != "none":
                     best_mp4_url = format.get("url")
