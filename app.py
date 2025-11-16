@@ -1,10 +1,9 @@
 from flask import Flask, render_template, request, redirect, url_for
 import requests
+from urllib.parse import quote # Import the standard URL encoding function
 
 app = Flask(__name__)
 
-# This is a public API that uses the powerful yt-dlp library in the background.
-# It is more direct and reliable for our purpose.
 API_ENDPOINT = "https://yt-dlp-api.vercel.app/api/info?url="
 
 @app.route('/')
@@ -14,39 +13,47 @@ def index():
 
 @app.route('/download', methods=['POST'])
 def download():
-    """Uses the yt-dlp-api to get a direct download link."""
+    """URL-encodes the video URL before sending it to the API."""
     video_url = request.form['video_url']
     
     if not video_url:
         return redirect(url_for('index'))
 
     try:
-        # We append the user's video URL directly to the API endpoint URL.
-        # This is a simple GET request, which is more reliable.
-        full_api_url = f"{API_ENDPOINT}{video_url}"
+        # THE CRUCIAL FIX: URL-encode the user's video link to make it safe.
+        safe_video_url = quote(video_url)
 
-        # Make the request to the API
+        # Append the now-safe video URL to the API endpoint.
+        full_api_url = f"{API_ENDPOINT}{safe_video_url}"
+
+        # Make the GET request to the API
         response = requests.get(full_api_url)
-        response.raise_for_status()  # This will raise an error if the request failed
+        response.raise_for_status()  # Check for HTTP errors
 
-        # Get the JSON data from the response
         data = response.json()
 
-        # The API gives us a list of available formats. We will find the best MP4.
         best_mp4_url = None
+        # Look for the best format that has video, audio, and is an mp4 file.
         for format in data.get("formats", []):
-            # Look for a format that has both video and audio and is an mp4.
             if format.get("vcodec") != "none" and format.get("acodec") != "none" and format.get("ext") == "mp4":
                 best_mp4_url = format.get("url")
-                break # Stop after finding the first suitable format
+                break # Found a good one, no need to look further
 
         if best_mp4_url:
-            # If we found a link, redirect the user's browser to it.
             return redirect(best_mp4_url)
         else:
-            # If no suitable MP4 format was found, just go back to the homepage.
-            print("No suitable MP4 format with video and audio found.")
-            return redirect(url_for('index'))
+            # If a perfect mp4 isn't found, try to find ANY format with video and audio
+            # This makes the app more robust for other sites.
+            for format in data.get("formats", []):
+                if format.get("vcodec") != "none" and format.get("acodec") != "none":
+                    best_mp4_url = format.get("url")
+                    break
+            
+            if best_mp4_url:
+                return redirect(best_mp4_url)
+            else:
+                 print("No suitable downloadable format was found.")
+                 return redirect(url_for('index'))
 
     except Exception as e:
         print(f"An error occurred: {e}")
