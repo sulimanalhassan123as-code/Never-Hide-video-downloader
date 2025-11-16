@@ -1,7 +1,10 @@
 from flask import Flask, render_template, request, redirect, url_for
-import yt_dlp
+import requests # The library to make HTTP requests
 
 app = Flask(__name__)
+
+# The URL for the public Cobalt API
+COBALT_API_URL = "https://co.wuk.sh/api/json"
 
 @app.route('/')
 def index():
@@ -10,36 +13,39 @@ def index():
 
 @app.route('/download', methods=['POST'])
 def download():
-    """Handles the video downloading logic using yt-dlp."""
+    """Sends the user's URL to the Cobalt API and redirects to the result."""
     video_url = request.form['video_url']
     
     if not video_url:
         return redirect(url_for('index'))
 
     try:
-        # These are the options for yt-dlp
-        # We are asking for the best quality MP4 file that has both video and audio
-        ydl_opts = {
-            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+        # Prepare the data to send to the Cobalt API
+        # We are asking for the best quality video download
+        payload = {
+            "url": video_url,
+            "vQuality": "1080", # You can change this to 720, 480 etc.
+            "isNoTTWatermark": True
         }
 
-        # Use yt-dlp to extract the video information WITHOUT downloading it
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(video_url, download=False)
-            
-            # From the extracted information, get the direct download URL
-            download_url = info.get('url')
+        # Send a POST request to the Cobalt API
+        response = requests.post(COBALT_API_URL, json=payload)
+        response.raise_for_status() # This will raise an error if the request failed
 
-            if download_url:
-                # Redirect the user's browser directly to the download link
-                # This is much more efficient than sending the file from our server
-                return redirect(download_url)
-            else:
-                # If for some reason a URL couldn't be found, go back to the homepage
-                return redirect(url_for('index'))
+        # Get the JSON data from the response
+        data = response.json()
+
+        # Check the status from the API and redirect to the download URL
+        if data.get("status") == "stream":
+            download_url = data.get("url")
+            return redirect(download_url)
+        else:
+            # If the API returns an error or something else, go back home
+            print(f"API returned an error: {data.get('text')}")
+            return redirect(url_for('index'))
 
     except Exception as e:
-        # If any error occurs, print it for debugging and redirect the user
+        # If our request to the API fails, print the error and go back home
         print(f"An error occurred: {e}")
         return redirect(url_for('index'))
 
