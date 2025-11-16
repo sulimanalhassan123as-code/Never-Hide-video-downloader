@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Downloader</title>
+    <title>Simple Video Downloader</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
@@ -12,18 +12,21 @@
             align-items: center;
             height: 100vh;
             margin: 0;
-            background-color: #f4f7f6;
+            background-color: #f0f2f5;
         }
         .container {
             text-align: center;
             background-color: white;
-            padding: 40px;
+            padding: 40px 50px;
             border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 500px;
         }
         h1 {
-            color: #333;
-            margin-bottom: 20px;
+            color: #1c1e21;
+            margin-bottom: 25px;
+            font-size: 28px;
         }
         form {
             display: flex;
@@ -31,30 +34,33 @@
             align-items: center;
         }
         .url-input {
-            width: 350px;
-            padding: 12px;
+            width: 100%;
+            padding: 14px;
             margin-bottom: 20px;
-            border: 1px solid #ddd;
+            border: 1px solid #dddfe2;
             border-radius: 8px;
             font-size: 16px;
+            box-sizing: border-box; /* Important for padding */
         }
         .download-btn {
-            background-color: #007bff;
+            background-color: #1877f2;
             color: white;
             border: none;
-            padding: 12px 25px;
+            padding: 14px 28px;
             border-radius: 8px;
             font-size: 16px;
+            font-weight: bold;
             cursor: pointer;
-            transition: background-color 0.3s;
+            transition: background-color 0.3s ease;
+            width: 100%;
         }
         .download-btn:hover {
-            background-color: #0056b3;
+            background-color: #166fe5;
         }
         .loader {
             display: none; /* Hidden by default */
             margin-top: 20px;
-            font-size: 14px;
+            font-size: 15px;
             color: #555;
         }
     </style>
@@ -71,23 +77,25 @@
                 placeholder="Paste your video link here..." 
                 required
             >
-            <button type="submit" class="download-btn">Download</button>
+            <button type="submit" class="download-btn">Download Video</button>
         </form>
         <div id="loader" class="loader">
-            Processing your video... Please wait.
+            ⏳ Processing your video... Please wait.
         </div>
     </div>
 
     <script>
-        // This script shows a "Processing" message when the user clicks download
         const form = document.getElementById('download-form');
         const loader = document.getElementById('loader');
+        const button = document.querySelector('.download-btn');
 
         form.addEventListener('submit', () => {
-            // Show the loader message
+            // Show the loader message and change button text when form is submitted
             loader.style.display = 'block';
+            button.textContent = 'Processing...';
+            button.disabled = true; // Prevent multiple clicks
         });
     </script>
 
 </body>
-      </html>
+</html>
