@@ -1,108 +1,70 @@
 import os
-import tempfile
-import shutil
-import threading
-from flask import Flask, render_template, request, jsonify, send_file
-from yt_dlp import YoutubeDL
+import yt_dlp
+import uuid
+import subprocess
+from flask import Flask, request, send_file, jsonify, render_template
 
 app = Flask(__name__)
 
-# Options for retrieving info only
-YDL_OPTS_INFO = {
-    "skip_download": True,
-    "quiet": True,
-    "no_warnings": True,
-}
-
-def get_video_info(url):
-    with YoutubeDL(YDL_OPTS_INFO) as ydl:
-        info = ydl.extract_info(url, download=False)
-    return info
 
 @app.route("/")
 def index():
     return render_template("index.html")
 
-@app.route("/api/info")
-def api_info():
-    url = request.args.get("url", "").strip()
-    if not url:
-        return jsonify({"error": "No url provided"}), 400
+
+@app.route("/api/download")
+def download_video():
+    video_url = request.args.get("url")
+    if not video_url:
+        return jsonify({"error": "No URL provided"}), 400
+
+    # Unique file names to avoid conflicts
+    video_id = str(uuid.uuid4())
+    temp_video = f"video_{video_id}.mp4"
+    temp_audio = f"audio_{video_id}.m4a"
+    final_file = f"final_{video_id}.mp4"
+
+    # yt-dlp options for separate download
+    ydl_opts = {
+        "outtmpl": "%(id)s",
+        "quiet": True,
+        "no_warnings": True,
+        "format": "bestvideo+bestaudio/best",
+        "merge_output_format": "mp4",
+        "postprocessors": [{
+            "key": "FFmpegVideoConvertor",
+            "preferedformat": "mp4"
+        }]
+    }
 
     try:
-        info = get_video_info(url)
-        # Build minimal formats info for frontend
-        formats = []
-        for f in info.get("formats", [])[::-1]:
-            formats.append({
-                "format_id": f.get("format_id"),
-                "ext": f.get("ext"),
-                "vcodec": f.get("vcodec"),
-                "acodec": f.get("acodec"),
-                "format_note": f.get("format_note"),
-                "height": f.get("height"),
-                "width": f.get("width"),
-                "filesize": f.get("filesize") or f.get("filesize_approx"),
-                "tbr": f.get("tbr"),
-            })
+        # Download video+audio separately and merge automatically
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(video_url, download=False)
+            filename = ydl.prepare_filename(info)
+            ydl.download([video_url])
 
-        return jsonify({
-            "id": info.get("id"),
-            "title": info.get("title"),
-            "uploader": info.get("uploader"),
-            "duration": info.get("duration"),
-            "formats": formats,
-        })
+        # Find downloaded merged file
+        downloaded = filename.replace(".webm", ".mp4").replace(".mkv", ".mp4")
+        downloaded = downloaded.replace(".fvideo", ".mp4")
+
+        # Serve the merged file
+        return send_file(
+            downloaded,
+            as_attachment=True,
+            download_name=f"{info.get('title','video')}.mp4",
+            mimetype="video/mp4"
+        )
+
     except Exception as e:
-        app.logger.exception("Error fetching info")
         return jsonify({"error": str(e)}), 500
 
-@app.route("/download")
-def download():
-    url = request.args.get("url", "").strip()
-    format_id = request.args.get("format_id", "").strip()
-    if not url or not format_id:
-        return jsonify({"error": "url and format_id are required"}), 400
-
-    tmpdir = tempfile.mkdtemp(prefix="vd_")
-    try:
-        out_template = os.path.join(tmpdir, "%(title)s.%(ext)s")
-        ydl_opts = {
-            "format": format_id,
-            "outtmpl": out_template,
-            "noplaylist": True,
-            "quiet": True,
-            "no_warnings": True,
-        }
-
-        with YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-
-        # Find downloaded file(s)
-        files = [os.path.join(tmpdir, f) for f in os.listdir(tmpdir)]
-        if not files:
-            app.logger.error("No file downloaded in tmpdir")
-            return jsonify({"error": "Download failed"}), 500
-
-        # If multiple files, pick the largest (usually the merged file)
-        files_sorted = sorted(files, key=lambda p: os.path.getsize(p), reverse=True)
-        file_path = files_sorted[0]
-
-        # Stream file to client as attachment
-        filename = os.path.basename(file_path)
-        return send_file(file_path, as_attachment=True, download_name=filename)
-    except Exception as e:
-        app.logger.exception("Download error")
-        return jsonify({"error": str(e)}), 500
     finally:
-        # Clean up in background thread
-        def cleanup(path):
-            try:
-                shutil.rmtree(path)
-            except Exception:
-                pass
-        threading.Thread(target=cleanup, args=(tmpdir,)).start()
-
-if __name__ == "__main__":
-    # Local debug server
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=False)
+        # Clean up files after download
+        try:
+            if os.path.exists(temp_video):
+                os.remove(temp_video)
+            if os.path.exists(temp_audio):
+                os.remove(temp_audio)
+        except:
+            pass
