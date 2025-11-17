@@ -1,124 +1,128 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Downloader</title>
-
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f0f2f5;
-            height: 100vh;
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .container {
-            width: 90%;
-            max-width: 500px;
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
-            text-align: center;
-        }
-
-        input {
-            width: 100%;
-            padding: 12px;
-            font-size: 16px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            margin-top: 20px;
-        }
-
-        button {
-            margin-top: 20px;
-            width: 100%;
-            padding: 14px;
-            font-size: 16px;
-            background: #1877f2;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background: #166fe5;
-        }
-
-        .status {
-            display: none;
-            margin-top: 20px;
-            color: #555;
-        }
-
-        .error {
-            display: none;
-            margin-top: 20px;
-            color: red;
-        }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Advanced Video Downloader</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:#f3f6fb;margin:0;padding:24px}
+    .card{max-width:820px;margin:24px auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 6px 30px rgba(7,15,30,0.06)}
+    input[type=text]{width:100%;padding:12px;border-radius:8px;border:1px solid #e3e7ef}
+    button{background:#0b63ff;color:#fff;padding:10px 16px;border-radius:8px;border:none;cursor:pointer}
+    button:disabled{opacity:.6}
+    .formats{margin-top:16px}
+    .format-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f2f6}
+    .meta{font-size:13px;color:#444}
+    .small{font-size:12px;color:#666}
+    .error{color:#b00020;margin-top:12px}
+  </style>
 </head>
 <body>
+  <div class="card">
+    <h2>Advanced Video Downloader</h2>
+    <p class="small">Paste a video URL, view available formats, and choose which to download.</p>
 
-<div class="container">
-    <h1>Video Downloader</h1>
+    <input id="videoUrl" type="text" placeholder="Paste video link (YouTube, TikTok, Instagram, etc.)" />
+    <div style="display:flex;margin-top:12px;gap:8px">
+      <button id="fetchBtn">Get Formats</button>
+      <button id="clearBtn" type="button">Clear</button>
+    </div>
 
-    <input id="videoInput" placeholder="Paste your video link here..." />
+    <div id="status" class="small" style="margin-top:12px;display:none">Loading…</div>
+    <div id="error" class="error" style="display:none"></div>
 
-    <button onclick="downloadVideo()">Download</button>
-
-    <div id="status" class="status">⏳ Processing…</div>
-    <div id="error" class="error"></div>
-</div>
+    <div id="formats" class="formats"></div>
+  </div>
 
 <script>
-    async function downloadVideo() {
-        const url = document.getElementById("videoInput").value;
-        const status = document.getElementById("status");
-        const error = document.getElementById("error");
+const fetchBtn = document.getElementById('fetchBtn')
+const clearBtn = document.getElementById('clearBtn')
+const urlInput = document.getElementById('videoUrl')
+const formatsDiv = document.getElementById('formats')
+const status = document.getElementById('status')
+const errorEl = document.getElementById('error')
 
-        if (!url) return;
+fetchBtn.addEventListener('click', async ()=>{
+  const url = urlInput.value.trim()
+  errorEl.style.display = 'none'
+  formatsDiv.innerHTML = ''
+  if(!url){ errorEl.textContent = 'Please enter a URL'; errorEl.style.display='block'; return }
 
-        status.style.display = "block";
-        error.style.display = "none";
-        status.textContent = "⏳ Processing…";
+  status.style.display = 'block'
+  status.textContent = 'Fetching formats…'
+  fetchBtn.disabled = true
 
-        try {
-            const res = await fetch(`/api/get_video_info?url=${encodeURIComponent(url)}`);
+  try{
+    const res = await fetch(`/api/info?url=${encodeURIComponent(url)}`)
+    if(!res.ok) throw new Error('Failed to fetch video data')
+    const data = await res.json()
+    if(data.error) throw new Error(data.error)
 
-            if (!res.ok) throw new Error("Failed to fetch video data.");
+    status.style.display = 'none'
 
-            const data = await res.json();
+    const title = document.createElement('div')
+    title.innerHTML = `<strong>${escapeHtml(data.title || 'Untitled')}</strong> <div class=\"small\">by ${escapeHtml(data.uploader || '')}</div>`
+    formatsDiv.appendChild(title)
 
-            if (data.error) throw new Error(data.error);
-
-            let bestUrl = null;
-
-            for (const f of data.formats) {
-                if (f.vcodec !== "none" && f.acodec !== "none" && f.ext === "mp4") {
-                    bestUrl = f.url;
-                    break;
-                }
-            }
-
-            if (!bestUrl) throw new Error("No downloadable MP4 found.");
-
-            status.textContent = "Download starting…";
-            window.location.href = bestUrl;
-
-        } catch (e) {
-            status.style.display = "none";
-            error.textContent = e.message;
-            error.style.display = "block";
-        }
+    if(!data.formats || data.formats.length === 0){
+      formatsDiv.appendChild(document.createTextNode('No formats found'))
+      return
     }
-</script>
 
+    // Render format list
+    for(const f of data.formats){
+      const div = document.createElement('div')
+      div.className = 'format-item'
+
+      const left = document.createElement('div')
+      left.innerHTML = `<div class=\"meta\">${escapeHtml(f.ext)} ${f.height ? f.height + 'p' : ''} ${f.format_note ? (' - ' + escapeHtml(f.format_note)) : ''}</div><div class=\"small\">format: ${escapeHtml(f.format_id)} ${f.filesize ? ('- ' + formatBytes(f.filesize)) : ''}</div>`
+
+      const right = document.createElement('div')
+      const btn = document.createElement('button')
+      btn.textContent = 'Download'
+      btn.onclick = ()=>{ startDownload(url, f.format_id) }
+      right.appendChild(btn)
+
+      div.appendChild(left)
+      div.appendChild(right)
+      formatsDiv.appendChild(div)
+    }
+
+  }catch(e){
+    errorEl.textContent = e.message
+    errorEl.style.display='block'
+    status.style.display = 'none'
+  }finally{
+    fetchBtn.disabled = false
+  }
+})
+
+clearBtn.addEventListener('click', ()=>{
+  urlInput.value = ''
+  formatsDiv.innerHTML = ''
+  errorEl.style.display = 'none'
+})
+
+function startDownload(url, format_id){
+  // Redirect browser to /download which will stream the file as attachment
+  const downloadUrl = `/download?url=${encodeURIComponent(url)}&format_id=${encodeURIComponent(format_id)}`
+  window.location.href = downloadUrl
+}
+
+function formatBytes(bytes){
+  if(!bytes) return ''
+  const sizes = ['Bytes','KB','MB','GB','TB']
+  if(bytes === 0) return '0 Byte'
+  const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)), 10)
+  return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i]
+}
+
+function escapeHtml(text){
+  if(!text) return ''
+  return text.replace(/[&"'<>]/g, function(c){
+    return {'&':'&amp;','"':'&quot;','\'':'&#39;','<':'&lt;','>':'&gt;'}[c]
+  })
+}
+</script>
 </body>
-</html>
+    </html>
