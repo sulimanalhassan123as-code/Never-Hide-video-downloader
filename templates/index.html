@@ -1,12 +1,12 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Advanced Video Downloader</title>
   <style>
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:#f3f6fb;margin:0;padding:24px}
-    .card{max-width:820px;margin:24px auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 6px 30px rgba(7,15,30,0.06)}
+    .card{max-width:900px;margin:24px auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 6px 30px rgba(7,15,30,0.06)}
     input[type=text]{width:100%;padding:12px;border-radius:8px;border:1px solid #e3e7ef}
     button{background:#0b63ff;color:#fff;padding:10px 16px;border-radius:8px;border:none;cursor:pointer}
     button:disabled{opacity:.6}
@@ -20,9 +20,9 @@
 <body>
   <div class="card">
     <h2>Advanced Video Downloader</h2>
-    <p class="small">Paste a video URL, view available formats, and choose which to download.</p>
+    <p class="small">Paste a video URL (YouTube, TikTok, Instagram, X, Facebook …), get formats, and choose one to download.</p>
 
-    <input id="videoUrl" type="text" placeholder="Paste video link (YouTube, TikTok, Instagram, etc.)" />
+    <input id="videoUrl" type="text" placeholder="Paste video link here" />
     <div style="display:flex;margin-top:12px;gap:8px">
       <button id="fetchBtn">Get Formats</button>
       <button id="clearBtn" type="button">Clear</button>
@@ -61,7 +61,7 @@ fetchBtn.addEventListener('click', async ()=>{
     status.style.display = 'none'
 
     const title = document.createElement('div')
-    title.innerHTML = `<strong>${escapeHtml(data.title || 'Untitled')}</strong> <div class=\"small\">by ${escapeHtml(data.uploader || '')}</div>`
+    title.innerHTML = `<strong>${escapeHtml(data.title || 'Untitled')}</strong> <div class="small">by ${escapeHtml(data.uploader || '')}</div>`
     formatsDiv.appendChild(title)
 
     if(!data.formats || data.formats.length === 0){
@@ -69,13 +69,12 @@ fetchBtn.addEventListener('click', async ()=>{
       return
     }
 
-    // Render format list
     for(const f of data.formats){
       const div = document.createElement('div')
       div.className = 'format-item'
 
       const left = document.createElement('div')
-      left.innerHTML = `<div class=\"meta\">${escapeHtml(f.ext)} ${f.height ? f.height + 'p' : ''} ${f.format_note ? (' - ' + escapeHtml(f.format_note)) : ''}</div><div class=\"small\">format: ${escapeHtml(f.format_id)} ${f.filesize ? ('- ' + formatBytes(f.filesize)) : ''}</div>`
+      left.innerHTML = `<div class="meta">${escapeHtml(f.ext)} ${f.height ? f.height + 'p' : ''} ${f.format_note ? (' - ' + escapeHtml(f.format_note)) : ''}</div><div class="small">format: ${escapeHtml(f.format_id)} ${f.filesize ? ('- ' + formatBytes(f.filesize)) : ''}</div>`
 
       const right = document.createElement('div')
       const btn = document.createElement('button')
@@ -104,7 +103,6 @@ clearBtn.addEventListener('click', ()=>{
 })
 
 function startDownload(url, format_id){
-  // Redirect browser to /download which will stream the file as attachment
   const downloadUrl = `/download?url=${encodeURIComponent(url)}&format_id=${encodeURIComponent(format_id)}`
   window.location.href = downloadUrl
 }
@@ -120,9 +118,9 @@ function formatBytes(bytes){
 function escapeHtml(text){
   if(!text) return ''
   return text.replace(/[&"'<>]/g, function(c){
-    return {'&':'&amp;','"':'&quot;','\'':'&#39;','<':'&lt;','>':'&gt;'}[c]
+    return {'&':'&amp;','"':'&quot;',"'":'&#39;','<':'&lt;','>':'&gt;'}[c]
   })
 }
 </script>
 </body>
-    </html>
+  </html>
