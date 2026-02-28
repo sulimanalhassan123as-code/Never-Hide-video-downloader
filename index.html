@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dhikr Counter v2</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- PWA Setup -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#2E7D32">
+  <meta name="description" content="A modern offline Dhikr Counter app by Suleiman Alhassan.">
+  <link rel="icon" href="/icon-192.png" type="image/png">
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then(() => console.log('✅ Service Worker registered successfully'))
+          .catch(err => console.log('❌ Service Worker registration failed:', err));
+      });
+    }
+  </script>
+</head>
+<body>
+  <!-- Setup Screen -->
+  <div id="setup-screen" class="screen active">
+    <header>
+      <h1>Dhikr Counter v2</h1>
+      <button id="dark-mode-toggle">🌙</button>
+    </header>
+
+    <main>
+      <h2>Choose your Dhikr</h2>
+      <div class="preset-buttons">
+        <button class="preset-btn" data-target="33" data-text="SubhanAllah (33)">SubhanAllah (33)</button>
+        <button class="preset-btn" data-target="33" data-text="Alhamdulillah (33)">Alhamdulillah (33)</button>
+        <button class="preset-btn" data-target="34" data-text="Allahu Akbar (34)">Allahu Akbar (34)</button>
+        <button class="preset-btn" data-target="100" data-text="Astaghfirullah (100)">Astaghfirullah (100)</button>
+        <button class="preset-btn custom" id="custom-btn">Custom</button>
+      </div>
+
+      <div class="custom-input" id="custom-input-container">
+        <input type="number" id="custom-target-input" placeholder="Enter target count">
+        <input type="text" id="custom-text-input" placeholder="Enter Dhikr text">
+        <button id="use-custom-btn">Start</button>
+      </div>
+    </main>
+
+    <footer>
+      <p>Created by <strong>Suleiman Alhassan</strong></p>
+    </footer>
+  </div>
+
+  <!-- Counter Screen -->
+  <div id="counter-screen" class="screen">
+    <div class="counter-header">
+      <button id="reset-btn">← Back</button>
+      <p id="current-dhikr-text"></p>
+    </div>
+
+    <div id="counter-container">
+      <svg id="progress-ring" width="200" height="200">
+        <circle r="90" cx="100" cy="100" stroke="#2E7D32" stroke-width="15" fill="transparent"/>
+      </svg>
+      <div id="tap-area">
+        <p id="count-display">0</p>
+        <p id="target-display">/ 100</p>
+      </div>
+    </div>
+
+    <div class="counter-footer">
+      <button id="manual-reset-btn">Reset Count</button>
+    </div>
+  </div>
+
+  <!-- Install Button -->
+  <button id="install-btn">📱 Install App</button>
+
+  <script src="script.js"></script>
+</body>
+    </html>
